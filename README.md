@@ -1,3 +1,7 @@
+# Fork of log4j-finder to detect Spring versions vulnerable to _Spring4Shell_ (CVE-2022-22965)
+
+Info below is not adjusted. Principles are the same. Hashes of the vulnerable file, CachedIntrospectionResults.class, are taken from all releases of spring-beans from Maven central.
+
 # log4j-finder
 
 A Python3 script to scan the filesystem to find Log4j2 that is vulnerable to _Log4Shell_ (`CVE-2021-44228` & `CVE-2021-45046` & `CVE-2021-45105`). 
