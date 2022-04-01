@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 #
-# file:     log4j-finder.py
-# author:   NCC Group / Fox-IT / Research and Intelligence Fusion Team (RIFT)
+# file:                    spring4shell-finder.py
+# original log4j author:   NCC Group / Fox-IT / Research and Intelligence Fusion Team (RIFT)
+# adjusted for spring by:  DHL Parcel Benelux
 #
-#  Scan the filesystem to find Log4j2 files that is vulnerable to Log4Shell (CVE-2021-44228)
+#  Scan the filesystem to find Spring files that are vulnerable to Spring4Shell (cve-2022-22965)
 #  It scans recursively both on disk and inside Java Archive files (JARs).
 #
 #  Example usage to scan a path (defaults to /):
-#      $ python3 log4j-finder.py /path/to/scan
+#      $ python3 spring-finder.py /path/to/scan
 #
 #  Or directly a JAR file:
-#      $ python3 log4j-finder.py /path/to/jarfile.jar
+#      $ python3 spring-finder.py /path/to/jarfile.jar
 #
 #  Or multiple directories:
-#      $ python3 log4j-finder.py /path/to/dir1 /path/to/dir2
+#      $ python3 spring-finder.py /path/to/dir1 /path/to/dir2
 #
 #  Exclude files or directories:
-#      $ python3 log4j-finder.py / --exclude "/*/.dontgohere" --exclude "/home/user/*.war"
+#      $ python3 spring-finder.py / --exclude "/*/.dontgohere" --exclude "/home/user/*.war"
 #
 import os
 import io
@@ -37,11 +38,11 @@ from pathlib import Path
 
 __version__ = "1.2.0"
 FIGLET = f"""\
- __               _____  __         ___ __           __
-|  |.-----.-----.|  |  ||__|______.'  _|__|.-----.--|  |.-----.----.
-|  ||  _  |  _  ||__    |  |______|   _|  ||     |  _  ||  -__|   _|
-|__||_____|___  |   |__||  |      |__| |__||__|__|_____||_____|__|
-          |_____|      |___| v{__version__} https://github.com/fox-it/log4j-finder
+  ___          _           _ _     _        _ _     ___ _         _         
+ / __|_ __ _ _(_)_ _  __ _| | | __| |_  ___| | |___| __(_)_ _  __| |___ _ _ 
+ \__ \ '_ \ '_| | ' \/ _` |_  _(_-< ' \/ -_) | |___| _|| | ' \/ _` / -_) '_|
+ |___/ .__/_| |_|_||_\__, | |_|/__/_||_\___|_|_|   |_| |_|_||_\__,_\___|_|  
+     |_|             |___/  V1.0 https://github.com/dhlparcel/spring-finder  
 """
 
 # Optionally import colorama to enable colored output for Windows
@@ -59,38 +60,74 @@ log = logging.getLogger(__name__)
 JAR_EXTENSIONS = (".jar", ".war", ".ear", ".zip")
 
 # Filenames to find and MD5 hash (also recursively in JAR_EXTENSIONS)
-# Currently we just look for JndiManager.class
+# Currently we just look for CachedIntrospectionResults.class
 FILENAMES = [
     p.lower()
     for p in [
-        "JndiManager.class",
+        "CachedIntrospectionResults.class",
     ]
 ]
 
 # Known BAD
 MD5_BAD = {
-    # JndiManager.class (source: https://github.com/nccgroup/Cyber-Defence/blob/master/Intelligence/CVE-2021-44228/modified-classes/md5sum.txt)
-    "04fdd701809d17465c17c7e603b1b202": "log4j 2.9.0 - 2.11.2",
-    "21f055b62c15453f0d7970a9d994cab7": "log4j 2.13.0 - 2.13.3",
-    "3bd9f41b89ce4fe8ccbf73e43195a5ce": "log4j 2.6 - 2.6.2",
-    "415c13e7c8505fb056d540eac29b72fa": "log4j 2.7 - 2.8.1",
-    "5824711d6c68162eb535cc4dbf7485d3": "log4j 2.12.0 - 2.12.1",
-    "102cac5b7726457244af1f44e54ff468": "log4j 2.12.2",
-    "6b15f42c333ac39abacfeeeb18852a44": "log4j 2.1 - 2.3",
-    "8b2260b1cce64144f6310876f94b1638": "log4j 2.4 - 2.5",
-    "a193703904a3f18fb3c90a877eb5c8a7": "log4j 2.8.2",
-    "f1d630c48928096a484e4b95ccb162a0": "log4j 2.14.0 - 2.14.1",
-    # 2.15.0 vulnerable to Denial of Service attack (source: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-45046)
-    "5d253e53fa993e122ff012221aa49ec3": "log4j 2.15.0",
-    # 2.16.0 vulnerable to Infinite recursion in lookup evaluation (source: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-45105)
-    "ba1cf8f81e7b31c709768561ba8ab558": "log4j 2.16.0",
+    # CachedIntrospectionResults.class
+    "c355308bb8a5965681144175d32a1123": "spring-beans 1.0-m4",
+    "113a498abfb9d05b2b07163d7ec47976": "spring-beans 1.2-rc1,1.2-rc2,1.2,1.2.1,1.2.2,1.2.3,1.2.4",
+    "0742cd25929a0d8c811791f9c0940868": "spring-beans 1.2.5,1.2.6",
+    "60f5d9137f2586947222fa5eede96586": "spring-beans 1.2.7,1.2.8",
+    "fd0f0684d2f3cb55f1a8b3d7d1761994": "spring-beans 1.2.9",
+    "bdabf8339f43ed9ae118a0d389af3f71": "spring-beans 2.0,2.0.1",
+    "d160115e18aba2e8dbe6709091e59599": "spring-beans 2.0-m1,2.0-m2,2.0-m4",
+    "596df687f1daee5a4ddce99c9729ab2f": "spring-beans 2.0.2",
+    "e5f410c830899954e7d81f1dc0551eff": "spring-beans 2.0.3",
+    "d6b5333050c4f1d933308ee00655de8f": "spring-beans 2.0.4,2.0.5,2.0.6,2.0.7,2.0.8",
+    "f585cc81061373b88526b500889e3fb4": "spring-beans 2.5,2.5.1",
+    "8d80a7aa6d05d7684e8d23015f99a1a2": "spring-beans 2.5.2",
+    "dd1f0dde9d443f9c7303af2bbcffde1c": "spring-beans 2.5.3,2.5.4,2.5.5,2.5.6,2.5.6.SEC01",
+    "49080e71931a41a975dfa1a8307e3c0d": "spring-beans 2.5.6.SEC02,2.5.6.SEC03",
+    "6946954d811dd6931b0542ea4dd99bb7": "spring-beans 3.0.0.RELEASE,3.0.1.RELEASE,3.0.2.RELEASE",
+    "46b74679d6980efafca1b1aeba0ba8d4": "spring-beans 3.0.3.RELEASE,3.0.4.RELEASE,3.0.5.RELEASE,3.0.6.RELEASE,3.0.7.RELEASE",
+    "fb6be0b009f4024741b61a828213a1fc": "spring-beans 3.1.0.RELEASE,3.1.1.RELEASE,3.1.2.RELEASE,3.1.3.RELEASE",
+    "1221d7f88b42be2f0f3429d3c1a2c957": "spring-beans 3.1.4.RELEASE",
+    "b96d622b87a29e17a2c71fb14f2f30a2": "spring-beans 3.2.0.RELEASE",
+    "e3165236b8560e4ca86cf6ad37904f45": "spring-beans 3.2.1.RELEASE,3.2.2.RELEASE,3.2.3.RELEASE,3.2.4.RELEASE",
+    "d637b8806b0a61867f6fe7097bdeb33d": "spring-beans 3.2.10.RELEASE,3.2.11.RELEASE,3.2.12.RELEASE,3.2.13.RELEASE,3.2.14.RELEASE,3.2.15.RELEASE,3.2.16.RELEASE,3.2.17.RELEASE",
+    "d4417a964948af31f1d56712099f760a": "spring-beans 3.2.18.RELEASE",
+    "aa0af536fe4d7fd2412c62d6a2f648f2": "spring-beans 3.2.5.RELEASE",
+    "2af314cd7dd10abc5f4fc8ffaaf70956": "spring-beans 3.2.6.RELEASE",
+    "8f3870f79a92c2cf0f66e75d6795bda7": "spring-beans 3.2.7.RELEASE",
+    "18133dcf8c4d12bd695e31dbc12d310a": "spring-beans 3.2.8.RELEASE,3.2.9.RELEASE",
+    "16ea4762589ec559379c0d53e103a439": "spring-beans 4.0.0.RELEASE",
+    "49a920496d1d4303942bc1c220acb4de": "spring-beans 4.0.1.RELEASE",
+    "f87da0c7069b00f506964fb091d44bfc": "spring-beans 4.0.2.RELEASE,4.0.3.RELEASE,4.0.4.RELEASE,4.0.5.RELEASE",
+    "8f4c0566cd192c0d75c0d57541882dcd": "spring-beans 4.0.6.RELEASE,4.0.7.RELEASE,4.0.8.RELEASE,4.0.9.RELEASE",
+    "88287b234daf8f77fb95c68d579b060f": "spring-beans 4.1.0.RELEASE",
+    "bb65b0ee4efba53baf2f6c467df1c415": "spring-beans 4.1.1.RELEASE,4.1.2.RELEASE,4.1.3.RELEASE,4.1.4.RELEASE,4.1.5.RELEASE,4.1.6.RELEASE,4.1.7.RELEASE,4.1.8.RELEASE,4.1.9.RELEASE",
+    "3ce4d2ca534637d82a04f597068a5981": "spring-beans 4.2.0.RELEASE,4.2.1.RELEASE,4.2.2.RELEASE,4.2.3.RELEASE,4.2.4.RELEASE,4.2.5.RELEASE,4.2.6.RELEASE,4.2.7.RELEASE",
+    "077e8e4b7f1aee22f975e368e17ee4b6": "spring-beans 4.2.8.RELEASE,4.2.9.RELEASE",
+    "6a585e7476933bcac387553f159674fc": "spring-beans 4.3.0.RELEASE,4.3.1.RELEASE,4.3.2.RELEASE",
+    "10ef1ca0bbf0fec02075c0e01851f616": "spring-beans 4.3.14.RELEASE,4.3.15.RELEASE,4.3.16.RELEASE,4.3.17.RELEASE,4.3.18.RELEASE,4.3.19.RELEASE,4.3.20.RELEASE,4.3.21.RELEASE,4.3.22.RELEASE,4.3.23.RELEASE,4.3.24.RELEASE,4.3.25.RELEASE,4.3.26.RELEASE,4.3.27.RELEASE",
+    "bf5ccc4861ac88e823c266a8f6413306": "spring-beans 4.3.28.RELEASE,4.3.29.RELEASE,4.3.30.RELEASE",
+    "42e7a76418f068902f8eadf344e4548e": "spring-beans 4.3.3.RELEASE,4.3.4.RELEASE,4.3.5.RELEASE,4.3.6.RELEASE,4.3.7.RELEASE,4.3.8.RELEASE,4.3.9.RELEASE,4.3.10.RELEASE,4.3.11.RELEASE,4.3.12.RELEASE,4.3.13.RELEASE",
+    "a3bf438be595c0ddc31e102f8efe5dec": "spring-beans 5.0.0.RELEASE,5.0.1.RELEASE,5.0.2.RELEASE",
+    "c0680792d09e1d5843a2f2ce9b81601f": "spring-beans 5.0.13.RELEASE,5.0.14.RELEASE,5.0.15.RELEASE,5.0.16.RELEASE,5.0.17.RELEASE",
+    "e5568528957e91bbf017436bb624fc96": "spring-beans 5.0.18.RELEASE,5.0.19.RELEASE,5.0.20.RELEASE",
+    "e125be61ac107609f76d07dd4a593773": "spring-beans 5.0.3.RELEASE,5.0.4.RELEASE",
+    "801cca2939dc411a813cc7ee67991cc1": "spring-beans 5.0.5.RELEASE,5.0.6.RELEASE,5.0.7.RELEASE",
+    "c9071b09a8e8d94a49f4c18a9e9a6f86": "spring-beans 5.0.8.RELEASE,5.0.9.RELEASE,5.0.10.RELEASE,5.0.11.RELEASE,5.0.12.RELEASE",
+    "caa08f1f1f4d8d8fd6ebbcea5b34793b": "spring-beans 5.1.0.RELEASE,5.1.1.RELEASE,5.1.2.RELEASE,5.1.3.RELEASE,5.1.4.RELEASE,5.1.5.RELEASE",
+    "459b5b7ecb6e365bc632b8f7f92b04d8": "spring-beans 5.1.13.RELEASE,5.1.14.RELEASE,5.1.15.RELEASE,5.2.3.RELEASE,5.2.4.RELEASE,5.2.5.RELEASE,5.2.6.RELEASE",
+    "e0efbdf7ac7af98293028243091f08a4": "spring-beans 5.1.16.RELEASE,5.1.17.RELEASE,5.2.7.RELEASE,5.2.8.RELEASE",
+    "cff1a1a7c981dabb847dbd0af7b160f7": "spring-beans 5.1.18.RELEASE,5.1.19.RELEASE,5.1.20.RELEASE,5.2.9.RELEASE,5.2.10.RELEASE,5.2.11.RELEASE,5.2.12.RELEASE,5.2.13.RELEASE,5.2.14.RELEASE,5.2.15.RELEASE,5.2.16.RELEASE,5.2.17.RELEASE,5.2.18.RELEASE,5.2.19.RELEASE",
+    "06b1c0063483f36f25a3d61b2541a9b9": "spring-beans 5.1.6.RELEASE,5.1.7.RELEASE,5.1.8.RELEASE,5.1.9.RELEASE,5.1.10.RELEASE,5.1.11.RELEASE,5.1.12.RELEASE,5.2.0.RELEASE,5.2.1.RELEASE,5.2.2.RELEASE",
+    "19c17b0d2c71a0349db6d3e5b95f1e12": "spring-beans 5.3.0,5.3.1,5.3.2,5.3.3,5.3.4,5.3.5,5.3.6,5.3.7,5.3.8,5.3.9,5.3.10,5.3.11,5.3.12,5.3.13,5.3.14,5.3.15,5.3.16,5.3.17",
 }
 
 # Known GOOD
 MD5_GOOD = {
-    # JndiManager.class (source: https://repo.maven.apache.org/maven2/org/apache/logging/log4j/log4j-core/2.17.0/log4j-core-2.17.0.jar)
-    "3dc5cf97546007be53b2f3d44028fa58": "log4j 2.17.0",
-    "3c3a43af0930a658716b870e66db1569": "log4j 2.17.1",
+    # CachedIntrospectionResults.class
+    "43e874cf22c960ac3d24d11b6f4ebe84": "spring-beans 5.3.18",
+    "555c1e4ff0425b86dc82805dd7fa3add": "spring-beans-5.2.20-RELEASE"
 }
 
 HOSTNAME = platform.node()
