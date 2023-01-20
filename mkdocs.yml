@@ -1,0 +1,10 @@
+site_name: spring-finder Documentation
+
+repo_url: https://github.com/dhlparcel/spring-finder
+edit_uri: blob/main/docs/
+
+nav:
+    - Home: index.md
+
+plugins:
+  - techdocs-core
